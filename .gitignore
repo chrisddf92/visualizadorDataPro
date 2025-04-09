@@ -1,0 +1,41 @@
+# Entornos virtuales
+.venv/
+venv/
+ENV/
+env/
+
+# Archivos de configuración locales
+*.env
+*.toml
+
+# Archivos de compilación de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs y archivos temporales
+*.log
+*.tmp
+*.bak
+*.swp
+*.DS_Store
+
+# Archivos exportados
+*.png
+*.csv
+*.xlsx
+
+# Archivos de Jupyter
+.ipynb_checkpoints
+
+# Configuración del sistema o editores
+.idea/
+.vscode/
+*.code-workspace
+
+# Archivos del sistema operativo
+Thumbs.db
+desktop.ini
+
+# Carpeta de Streamlit
+.streamlit/config.toml

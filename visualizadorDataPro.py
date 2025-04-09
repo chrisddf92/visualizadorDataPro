@@ -4,20 +4,28 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from io import BytesIO
 
+# Configuración visual
 sns.set(style="darkgrid")
-st.set_page_config(page_title="Visualizador de Datos Pro - Christian Duran", layout="wide")
-st.title("📊 Visualizador de Datos Pro - Christian Duran")
+st.set_page_config(page_title="Visualizador Pro - Christian Duran", layout="wide", page_icon="📊")
 
-st.sidebar.header("⚙️ Opciones de carga")
+# 🎨 Encabezado visual con HTML
+st.markdown("""
+    <div style="background-color:#4B8BBE;padding:15px;border-radius:10px">
+        <h2 style="color:white;text-align:center;">Visualizador de Datos Pro 🔍</h2>
+        <p style="color:white;text-align:center;">Desarrollado por <strong>Christian Duran</strong> • Interfaz moderna con filtros dinámicos y visualización avanzada</p>
+    </div>
+    <br>
+""", unsafe_allow_html=True)
 
+# 📥 Carga de archivo
+st.sidebar.markdown("## 📂 Carga tu archivo")
 archivo = st.sidebar.file_uploader("Sube un archivo CSV, Excel o JSON", type=["csv", "xlsx", "json"])
 
-# ⛔ Si no hay archivo, mostramos mensaje y detenemos ejecución
 if archivo is None:
-    st.info("👈 Por favor, sube un archivo para comenzar.")
+    st.info("👈 Sube un archivo desde el panel lateral para comenzar.")
     st.stop()
 
-# 🧪 Leer archivo dependiendo de su extensión
+# 🧪 Carga el archivo
 ext = archivo.name.split('.')[-1]
 try:
     if ext == "csv":
@@ -34,42 +42,45 @@ except Exception as e:
     st.stop()
 
 if df.empty or df.shape[1] == 0:
-    st.error("⚠️ El archivo está vacío o sin columnas válidas.")
+    st.warning("⚠️ El archivo está vacío o no contiene columnas válidas.")
     st.stop()
 
-# 🧼 Filtros dinámicos
-st.sidebar.header("🔍 Filtros")
+st.success("✅ Archivo cargado correctamente.")
+st.markdown(f"### 📄 Dataset: `{archivo.name}`  — {df.shape[0]} filas × {df.shape[1]} columnas")
+
+# 🧹 Filtros dinámicos
+st.sidebar.markdown("## 🧼 Filtros")
 
 df_filtrado = df.copy()
 
-# Filtrado por columnas categóricas
+# Filtro por columnas categóricas
 for col in df.select_dtypes(include=['object', 'category']).columns:
-    valores = df[col].dropna().unique().tolist()
-    seleccionados = st.sidebar.multiselect(f"Filtrar por {col}", opciones := sorted(valores))
+    opciones = sorted(df[col].dropna().unique().tolist())
+    seleccionados = st.sidebar.multiselect(f"Filtrar por {col}", opciones)
     if seleccionados:
         df_filtrado = df_filtrado[df_filtrado[col].isin(seleccionados)]
 
-# Filtrado por columnas numéricas
+# Filtro por columnas numéricas
 for col in df.select_dtypes(include=['int64', 'float64']).columns:
     min_val = float(df[col].min())
     max_val = float(df[col].max())
-    valores = st.sidebar.slider(f"Rango para {col}", min_val, max_val, (min_val, max_val))
-    df_filtrado = df_filtrado[df_filtrado[col].between(valores[0], valores[1])]
+    rango = st.sidebar.slider(f"Rango para {col}", min_val, max_val, (min_val, max_val))
+    df_filtrado = df_filtrado[df_filtrado[col].between(rango[0], rango[1])]
 
-# Filtrado por fecha (si hay alguna)
-for col in df.select_dtypes(include=['datetime64', 'object']).columns:
+# Filtro por columnas de fechas
+for col in df.select_dtypes(include=['object', 'datetime64']).columns:
     try:
         df[col] = pd.to_datetime(df[col])
         fecha_min = df[col].min()
         fecha_max = df[col].max()
-        rango = st.sidebar.date_input(f"Filtrar por fecha en {col}", (fecha_min, fecha_max))
+        rango = st.sidebar.date_input(f"Rango de fechas en {col}", (fecha_min, fecha_max))
         if isinstance(rango, tuple) and len(rango) == 2:
             df_filtrado = df_filtrado[df[col].between(rango[0], rango[1])]
     except:
-        continue  # ignorar columnas que no se pueden convertir a fecha
+        continue
 
-# 🔍 Mostrar DataFrame resultante
-st.subheader("🧾 Vista previa del DataFrame filtrado")
+# 🧾 Vista del DataFrame filtrado
+st.markdown("### 🧾 Vista previa del DataFrame filtrado")
 st.dataframe(df_filtrado)
 
 # 📥 Descargar CSV
@@ -79,19 +90,23 @@ def descargar_csv(dataframe):
     return buffer.getvalue()
 
 csv_data = descargar_csv(df_filtrado)
-st.download_button("📥 Descargar DataFrame filtrado", data=csv_data, file_name="datos_filtrados.csv", mime="text/csv")
+st.download_button("📥 Descargar CSV", data=csv_data, file_name="datos_filtrados.csv", mime="text/csv")
 
 # 📊 Visualización
-st.subheader("📈 Visualización de Datos")
+st.markdown("### 📈 Visualización de Datos")
 
 if df_filtrado.shape[0] > 0:
-    columna = st.selectbox("📂 Selecciona una columna para graficar", df_filtrado.columns)
+    col1, col2 = st.columns([3, 2])
 
-    tipo = st.selectbox("📊 Tipo de gráfico", [
-        "Histograma", "Gráfico de Línea", "Gráfico de Barras", 
-        "Boxplot", "Scatterplot (con otra columna)", 
-        "Heatmap de correlación"
-    ])
+    with col1:
+        columna = st.selectbox("📂 Selecciona una columna para graficar", df_filtrado.columns)
+
+    with col2:
+        tipo = st.selectbox("📊 Tipo de gráfico", [
+            "Histograma", "Gráfico de Línea", "Gráfico de Barras", 
+            "Boxplot", "Scatterplot (con otra columna)", 
+            "Heatmap de correlación"
+        ])
 
     fig, ax = plt.subplots(figsize=(10, 5))
 
@@ -127,9 +142,9 @@ if df_filtrado.shape[0] > 0:
         st.pyplot(fig)
 
         if st.button("💾 Guardar gráfico como PNG"):
-            fig.savefig(f"grafico_{columna}_{tipo}.png")
+            fig.savefig(f"grafico_{columna}_{tipo.replace(' ', '_')}.png")
             st.success("✅ Gráfico guardado.")
     except Exception as e:
         st.error(f"❌ Error al graficar: {e}")
 else:
-    st.warning("⚠️ No hay datos para graficar tras aplicar los filtros.")
+    st.warning("⚠️ No hay datos disponibles para graficar tras aplicar los filtros.")
